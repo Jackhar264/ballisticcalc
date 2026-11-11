@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ballistics-v1';
+const CACHE_NAME = 'ballistics-v2';
 const ASSETS = [
   './',
   './index.html',
