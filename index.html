@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#121212">
+  <link rel="manifest" href="manifest.json">
+  <title>G7 Ballistics</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --accent: #ff9800;
+      --text: #e0e0e0;
+      --text-muted: #888;
+      --border: #333;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    h1 { font-size: 1.25rem; text-align: center; margin: 4px 0 16px; color: var(--accent); }
+    
+    /* Results HUD */
+    .hud {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .hud-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .hud-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; }
+    .hud-val { font-size: 1.8rem; font-weight: 700; color: #fff; margin: 4px 0; }
+    .hud-sub { font-size: 0.85rem; color: var(--accent); }
+
+    /* Telemetry row */
+    .telemetry {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 20px;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-around;
+      color: var(--text-muted);
+    }
+    .telemetry span b { color: var(--text); }
+
+    /* Input Sections */
+    .section-title { font-size: 0.85rem; text-transform: uppercase; color: var(--accent); margin: 16px 0 8px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .input-group { display: flex; flex-direction: column; margin-bottom: 8px; }
+    label { font-size: 0.75rem; margin-bottom: 4px; color: var(--text-muted); }
+    input {
+      background: #2a2a2a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    input:focus { outline: none; border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <h1>🎯 G7 BALLISTICS</h1>
+
+  <!-- Primary Output HUD -->
+  <div class="hud">
+    <div class="hud-card">
+      <div class="hud-label">Elevation Come-Up</div>
+      <div class="hud-val" id="disp-elev-mrad">0.00</div>
+      <div class="hud-sub" id="disp-elev-moa">0.0 MOA</div>
+    </div>
+    <div class="hud-card">
+      <div class="hud-label">Wind Hold / Dial</div>
+      <div class="hud-val" id="disp-wind-mrad">0.00 -</div>
+      <div class="hud-sub" id="disp-wind-moa">0.0 MOA</div>
+    </div>
+  </div>
+
+  <!-- Telemetry Bar -->
+  <div class="telemetry">
+    <span>TOF: <b id="disp-tof">0.00s</b></span>
+    <span>V: <b id="disp-vel">0 fps</b></span>
+    <span>Mach: <b id="disp-mach">0.00</b></span>
+    <span>Sg: <b id="disp-sg">0.00</b></span>
+  </div>
+
+  <!-- Target Distance -->
+  <div class="input-group">
+    <label>TARGET RANGE (YARDS)</label>
+    <input type="number" id="range" value="650" step="10">
+  </div>
+
+  <!-- Environmental & Wind -->
+  <div class="section-title">Atmosphere & Wind</div>
+  <div class="grid-2">
+    <div class="input-group">
+      <label>Wind Speed (mph)</label>
+      <input type="number" id="wind_speed" value="10" step="1">
+    </div>
+    <div class="input-group">
+      <label>Wind Clock (1-12)</label>
+      <input type="number" id="wind_clock" value="3" step="0.5">
+    </div>
+    <div class="input-group">
+      <label>Temp (°F)</label>
+      <input type="number" id="temp" value="59" step="1">
+    </div>
+    <div class="input-group">
+      <label>Pressure (inHg)</label>
+      <input type="number" id="press" value="29.92" step="0.05">
+    </div>
+  </div>
+
+  <!-- Rifle & Bullet Specs -->
+  <div class="section-title">Gun & Load Data</div>
+  <div class="grid-2">
+    <div class="input-group">
+      <label>Muzzle Vel (fps)</label>
+      <input type="number" id="mv" value="2820" step="5">
+    </div>
+    <div class="input-group">
+      <label>G7 BC</label>
+      <input type="number" id="bc" value="0.315" step="0.001">
+    </div>
+    <div class="input-group">
+      <label>Sight Height (in)</label>
+      <input type="number" id="sight_h" value="1.75" step="0.05">
+    </div>
+    <div class="input-group">
+      <label>Zero Range (yd)</label>
+      <input type="number" id="zero" value="100" step="25">
+    </div>
+    <div class="input-group">
+      <label>Bullet Wt (gr)</label>
+      <input type="number" id="bullet_wt" value="140" step="1">
+    </div>
+    <div class="input-group">
+      <label>Bullet Dia (in)</label>
+      <input type="number" id="bullet_dia" value="0.264" step="0.001">
+    </div>
+    <div class="input-group">
+      <label>Bullet Len (in)</label>
+      <input type="number" id="bullet_len" value="1.38" step="0.01">
+    </div>
+    <div class="input-group">
+      <label>Twist Rate (1:X in)</label>
+      <input type="number" id="twist" value="8.0" step="0.25">
+    </div>
+  </div>
+
+  <script>
+    // --- JBM G7 DRAG TABLE ---
+    const G7_TABLE = [
+      [0.00, 0.1198], [0.05, 0.1197], [0.10, 0.1196], [0.15, 0.1194],
+      [0.20, 0.1193], [0.25, 0.1194], [0.30, 0.1194], [0.35, 0.1194],
+      [0.40, 0.1193], [0.45, 0.1193], [0.50, 0.1194], [0.55, 0.1193],
+      [0.60, 0.1194], [0.65, 0.1197], [0.70, 0.1202], [0.725, 0.1207],
+      [0.75, 0.1215], [0.775, 0.1226], [0.80, 0.1242], [0.825, 0.1266],
+      [0.85, 0.1306], [0.875, 0.1368], [0.90, 0.1464], [0.925, 0.1660],
+      [0.95, 0.2054], [0.975, 0.2993], [1.00, 0.3803], [1.025, 0.4015],
+      [1.05, 0.4043], [1.075, 0.4034], [1.10, 0.4014], [1.125, 0.3987],
+      [1.15, 0.3955], [1.20, 0.3884], [1.25, 0.3810], [1.30, 0.3732],
+      [1.35, 0.3657], [1.40, 0.3580], [1.50, 0.3440], [1.55, 0.3376],
+      [1.60, 0.3315], [1.65, 0.3260], [1.70, 0.3209], [1.75, 0.3160],
+      [1.80, 0.3117], [1.85, 0.3078], [1.90, 0.3042], [1.95, 0.3010],
+      [2.00, 0.2980], [2.05, 0.2951], [2.10, 0.2922], [2.15, 0.2892],
+      [2.20, 0.2864], [2.25, 0.2835], [2.30, 0.2807], [2.35, 0.2779],
+      [2.40, 0.2752], [2.45, 0.2725], [2.50, 0.2697], [2.55, 0.2670],
+      [2.60, 0.2643], [2.65, 0.2615], [2.70, 0.2588], [2.75, 0.2561],
+      [2.80, 0.2533], [2.85, 0.2506], [2.90, 0.2479], [2.95, 0.2451],
+      [3.00, 0.2424], [3.10, 0.2368], [3.20, 0.2313], [3.30, 0.2258],
+      [3.40, 0.2205], [3.50, 0.2154], [3.60, 0.2106], [3.70, 0.2060],
+      [3.80, 0.2017], [3.90, 0.1975], [4.00, 0.1935], [4.20, 0.1861],
+      [4.40, 0.1793], [4.60, 0.1730], [4.80, 0.1672], [5.00, 0.1618]
+    ];
+
+    function getCd(mach) {
+      if (mach <= G7_TABLE[0][0]) return G7_TABLE[0][1];
+      if (mach >= G7_TABLE[G7_TABLE.length - 1][0]) return G7_TABLE[G7_TABLE.length - 1][1];
+      let low = 0, high = G7_TABLE.length - 1;
+      while (low <= high) {
+        let mid = (low + high) >> 1;
+        if (G7_TABLE[mid][0] < mach) low = mid + 1;
+        else high = mid - 1;
+      }
+      let [m0, cd0] = G7_TABLE[low - 1];
+      let [m1, cd1] = G7_TABLE[low];
+      return cd0 + ((mach - m0) / (m1 - m0)) * (cd1 - cd0);
+    }
+
+    function calculate() {
+      // Inputs
+      const targetYd = parseFloat(document.getElementById('range').value) || 0;
+      const mvFps = parseFloat(document.getElementById('mv').value);
+      const bc = parseFloat(document.getElementById('bc').value);
+      const sightHIn = parseFloat(document.getElementById('sight_h').value);
+      const zeroYd = parseFloat(document.getElementById('zero').value);
+      const tempF = parseFloat(document.getElementById('temp').value);
+      const pressInHg = parseFloat(document.getElementById('press').value);
+      const windMph = parseFloat(document.getElementById('wind_speed').value);
+      const windClock = parseFloat(document.getElementById('wind_clock').value);
+      const wtGr = parseFloat(document.getElementById('bullet_wt').value);
+      const diaIn = parseFloat(document.getElementById('bullet_dia').value);
+      const lenIn = parseFloat(document.getElementById('bullet_len').value);
+      const twistIn = parseFloat(document.getElementById('twist').value);
+
+      // Constants
+      const g = 9.80665;
+      const v0 = mvFps * 0.3048;
+      const sightH_m = sightHIn * 0.0254;
+      const zero_m = zeroYd * 0.9144;
+      const target_m = targetYd * 0.9144;
+
+      // Atmosphere
+      const tempK = (tempF - 32) * (5 / 9) + 273.15;
+      const speedSound = Math.sqrt(1.4 * 287.05 * tempK);
+      const density = (pressInHg * 3386.39) / (287.05 * tempK);
+      const refArea = (Math.PI / 4) * (0.0254 ** 2);
+      const dragConst = (density * refArea) / (2.0 * 0.45359237 * bc);
+
+      // Wind Vector
+      const windRad = (windClock * 30.0) * (Math.PI / 180);
+      const wMps = windMph * 0.44704;
+      const wx = -wMps * Math.cos(windRad);
+      const wy = 0.0;
+      const wz = -wMps * Math.sin(windRad);
+
+      function derivs(vx, vy, vz) {
+        const vrx = vx - wx, vry = vy - wy, vrz = vz - wz;
+        const vr = Math.sqrt(vrx * vrx + vry * vry + vrz * vrz);
+        const cd = getCd(vr / speedSound);
+        const ad = dragConst * (vr * vr) * cd;
+        return [-ad * (vrx / vr), -g - ad * (vry / vr), -ad * (vrz / vr)];
+      }
+
+      // Zero bore angle via RK4
+      function zeroRK4(angle) {
+        let x = 0, y = -sightH_m;
+        let vx = v0 * Math.cos(angle), vy = v0 * Math.sin(angle);
+        const dt = 0.0005;
+        while (x < zero_m) {
+          const zd = (curVx, curVy) => {
+            const vc = Math.sqrt(curVx * curVx + curVy * curVy);
+            const ad = dragConst * (vc * vc) * getCd(vc / speedSound);
+            return [-ad * (curVx / vc), -g - ad * (curVy / vc)];
+          };
+          const [k1x, k1y] = zd(vx, vy);
+          const [k2x, k2y] = zd(vx + 0.5 * dt * k1x, vy + 0.5 * dt * k1y);
+          const [k3x, k3y] = zd(vx + 0.5 * dt * k2x, vy + 0.5 * dt * k2y);
+          const [k4x, k4y] = zd(vx + dt * k3x, vy + dt * k3y);
+          x += vx * dt; y += vy * dt;
+          vx += (dt / 6) * (k1x + 2 * k2x + 2 * k3x + k4x);
+          vy += (dt / 6) * (k1y + 2 * k2y + 2 * k3y + k4y);
+        }
+        return y;
+      }
+
+      let theta = Math.atan(sightH_m / zero_m);
+      for (let i = 0; i < 5; i++) {
+        let err = zeroRK4(theta);
+        if (Math.abs(err) < 0.00001) break;
+        theta -= err / zero_m;
+      }
+
+      // Main 3D RK4 Trajectory
+      const dt = 0.0005;
+      let t = 0, x = 0, y = -sightH_m, z = 0;
+      let vx = v0 * Math.cos(theta), vy = v0 * Math.sin(theta), vz = 0;
+      let px, py, pz, pt, pvx, pvy, pvz;
+
+      while (x < target_m) {
+        px = x; py = y; pz = z; pt = t;
+        pvx = vx; pvy = vy; pvz = vz;
+        const [k1x, k1y, k1z] = derivs(vx, vy, vz);
+        const [k2x, k2y, k2z] = derivs(vx + 0.5 * dt * k1x, vy + 0.5 * dt * k1y, vz + 0.5 * dt * k1z);
+        const [k3x, k3y, k3z] = derivs(vx + 0.5 * dt * k2x, vy + 0.5 * dt * k2y, vz + 0.5 * dt * k2z);
+        const [k4x, k4y, k4z] = derivs(vx + dt * k3x, vy + dt * k3y, vz + dt * k3z);
+
+        x += vx * dt; y += vy * dt; z += vz * dt;
+        vx += (dt / 6) * (k1x + 2 * k2x + 2 * k3x + k4x);
+        vy += (dt / 6) * (k1y + 2 * k2y + 2 * k3y + k4y);
+        vz += (dt / 6) * (k1z + 2 * k2z + 2 * k3z + k4z);
+        t += dt;
+      }
+
+      // Exact linear step interpolation
+      const frac = (x !== px) ? (target_m - px) / (x - px) : 1.0;
+      const yFinal = py + frac * (y - py);
+      const zFinal = pz + frac * (z - pz);
+      const tFinal = pt + frac * (t - pt);
+      const vImpact = Math.sqrt((pvx + frac * (vx - pvx))**2 + (pvy + frac * (vy - pvy))**2 + (pvz + frac * (vz - pvz))**2);
+
+      // Stability factor & Spin Drift
+      const tRatio = twistIn / diaIn;
+      const lRatio = lenIn / diaIn;
+      const ft = ((tempF + 460) / 519.0) * (29.92 / pressInHg);
+      let sg = (30.0 * wtGr) / ((tRatio**2) * (diaIn**3) * lRatio * (1.0 + (lRatio**2)));
+      sg = (sg * Math.cbrt(mvFps / 2800.0)) / ft;
+
+      const spinIn = 1.25 * (sg + 1.2) * (tFinal**1.83);
+      const totalZIn = (zFinal / 0.0254) + spinIn;
+
+      // Angular Solutions
+      const elevMrad = Math.atan2(-yFinal, target_m) * 1000.0;
+      const windMrad = Math.atan2(-totalZIn * 0.0254, target_m) * 1000.0;
+      const windDir = windMrad > 0 ? "R" : "L";
+
+      // Render to DOM
+      document.getElementById('disp-elev-mrad').innerText = elevMrad.toFixed(2);
+      document.getElementById('disp-elev-moa').innerText = (elevMrad * 3.43775).toFixed(1) + " MOA";
+      document.getElementById('disp-wind-mrad').innerText = Math.abs(windMrad).toFixed(2) + " " + windDir;
+      document.getElementById('disp-wind-moa').innerText = (Math.abs(windMrad) * 3.43775).toFixed(1) + " MOA";
+
+      document.getElementById('disp-tof').innerText = tFinal.toFixed(3) + "s";
+      document.getElementById('disp-vel').innerText = Math.round(vImpact / 0.3048) + " fps";
+      document.getElementById('disp-mach').innerText = (vImpact / speedSound).toFixed(2);
+      document.getElementById('disp-sg').innerText = sg.toFixed(2);
+    }
+
+    // Attach real-time calculation to all inputs
+    document.querySelectorAll('input').forEach(input => input.addEventListener('input', calculate));
+    window.addEventListener('DOMContentLoaded', calculate);
+
+    // Register PWA Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
