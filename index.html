@@ -23,7 +23,7 @@
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    h1 { font-size: 1.25rem; text-align: center; margin: 4px 0 16px; color: var(--accent); }
+    h1 { font-size: 1.25rem; text-align: center; margin: 4px 0 16px; color: var(--accent); letter-spacing: 0.05em; }
     
     /* Results HUD */
     .hud {
@@ -62,7 +62,7 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .input-group { display: flex; flex-direction: column; margin-bottom: 8px; }
     label { font-size: 0.75rem; margin-bottom: 4px; color: var(--text-muted); }
-    input {
+    input, select {
       background: #2a2a2a;
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -71,12 +71,13 @@
       font-size: 1rem;
       font-weight: 500;
     }
-    input:focus { outline: none; border-color: var(--accent); }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    select { appearance: none; }
   </style>
 </head>
 <body>
 
-  <h1>🎯 G7 BALLISTICS</h1>
+  <h1>G7 PRECISION BALLISTICS</h1>
 
   <!-- Primary Output HUD -->
   <div class="hud">
@@ -129,6 +130,49 @@
 
   <!-- Rifle & Bullet Specs -->
   <div class="section-title">Gun & Load Data</div>
+
+  <div class="input-group">
+    <label>BULLET PRESET (LIBRARY)</label>
+    <select id="bullet_preset">
+      <option value="custom">-- Custom / Manual Entry --</option>
+      
+      <!-- .224 / 5.56mm -->
+      <optgroup label=".224 (5.56mm)">
+        <option value="sierra_224_77_smk">.224 Sierra 77gr MatchKing</option>
+        <option value="hornady_224_75_eldm">.224 Hornady 75gr ELD-M</option>
+        <option value="berger_224_805_fullbore">.224 Berger 80.5gr Fullbore</option>
+        <option value="hornady_224_88_eldm">.224 Hornady 88gr ELD-M</option>
+      </optgroup>
+
+      <!-- .243 / 6mm -->
+      <optgroup label=".243 (6mm)">
+        <option value="hornady_243_105_bthp">.243 Hornady 105gr BTHP</option>
+        <option value="sierra_243_107_smk">.243 Sierra 107gr MatchKing</option>
+        <option value="hornady_243_108_eldm">.243 Hornady 108gr ELD-M</option>
+        <option value="hornady_243_109_eldm">.243 Hornady 109gr ELD-M</option>
+        <option value="berger_243_120_hybrid">.243 Berger 120gr LR Hybrid</option>
+      </optgroup>
+
+      <!-- .257 / 25 cal -->
+      <optgroup label=".257 (25 cal)">
+        <option value="hornady_257_134_eldm">.257 Hornady 134gr ELD-M</option>
+        <option value="berger_257_135_hybrid">.257 Berger 135gr LR Hybrid</option>
+      </optgroup>
+
+      <!-- .264 / 6.5mm -->
+      <optgroup label=".264 (6.5mm)">
+        <option value="hornady_264_140_eldm" selected>.264 Hornady 140gr ELD-M</option>
+        <option value="berger_264_140_hybrid">.264 Berger 140gr Hybrid Target</option>
+        <option value="berger_264_144_hybrid">.264 Berger 144gr LR Hybrid</option>
+        <option value="barnes_264_145_burner">.264 Barnes 145gr Match Burner</option>
+        <option value="hornady_264_147_eldm">.264 Hornady 147gr ELD-M</option>
+        <option value="sierra_264_150_smk">.264 Sierra 150gr MatchKing</option>
+        <option value="hornady_264_153_atip">.264 Hornady 153gr A-Tip Match</option>
+        <option value="berger_264_1535_hybrid">.264 Berger 153.5gr LR Hybrid</option>
+      </optgroup>
+    </select>
+  </div>
+
   <div class="grid-2">
     <div class="input-group">
       <label>Muzzle Vel (fps)</label>
@@ -165,6 +209,55 @@
   </div>
 
   <script>
+    // Bullet Presets Library: { bc, wt, dia, len }
+    const PRESETS = {
+      // .224 (5.56mm)
+      "sierra_224_77_smk":       { bc: 0.190, wt: 77.0,  dia: 0.224, len: 0.990 },
+      "hornady_224_75_eldm":     { bc: 0.212, wt: 75.0,  dia: 0.224, len: 1.110 },
+      "berger_224_805_fullbore": { bc: 0.226, wt: 80.5,  dia: 0.224, len: 1.095 },
+      "hornady_224_88_eldm":      { bc: 0.274, wt: 88.0,  dia: 0.224, len: 1.240 },
+
+      // .243 (6mm)
+      "hornady_243_105_bthp":    { bc: 0.265, wt: 105.0, dia: 0.243, len: 1.230 },
+      "sierra_243_107_smk":      { bc: 0.262, wt: 107.0, dia: 0.243, len: 1.230 },
+      "hornady_243_108_eldm":     { bc: 0.275, wt: 108.0, dia: 0.243, len: 1.265 },
+      "hornady_243_109_eldm":     { bc: 0.295, wt: 109.0, dia: 0.243, len: 1.315 },
+      "berger_243_120_hybrid":   { bc: 0.328, wt: 120.0, dia: 0.243, len: 1.383 },
+
+      // .257 (25 cal)
+      "hornady_257_134_eldm":     { bc: 0.325, wt: 134.0, dia: 0.257, len: 1.410 },
+      "berger_257_135_hybrid":   { bc: 0.334, wt: 135.0, dia: 0.257, len: 1.416 },
+
+      // .264 (6.5mm)
+      "hornady_264_140_eldm":     { bc: 0.315, wt: 140.0, dia: 0.264, len: 1.380 },
+      "berger_264_140_hybrid":   { bc: 0.311, wt: 140.0, dia: 0.264, len: 1.405 },
+      "berger_264_144_hybrid":   { bc: 0.336, wt: 144.0, dia: 0.264, len: 1.415 },
+      "barnes_264_145_burner":   { bc: 0.341, wt: 145.0, dia: 0.264, len: 1.466 },
+      "hornady_264_147_eldm":     { bc: 0.335, wt: 147.0, dia: 0.264, len: 1.440 },
+      "sierra_264_150_smk":      { bc: 0.356, wt: 150.0, dia: 0.264, len: 1.510 },
+      "hornady_264_153_atip":    { bc: 0.354, wt: 153.0, dia: 0.264, len: 1.505 },
+      "berger_264_1535_hybrid":  { bc: 0.356, wt: 153.5, dia: 0.264, len: 1.465 }
+    };
+
+    // Preset Selection Event
+    document.getElementById('bullet_preset').addEventListener('change', function(e) {
+      const selected = PRESETS[e.target.value];
+      if (selected) {
+        document.getElementById('bc').value = selected.bc;
+        document.getElementById('bullet_wt').value = selected.wt;
+        document.getElementById('bullet_dia').value = selected.dia;
+        document.getElementById('bullet_len').value = selected.len;
+        calculate();
+      }
+    });
+
+    // Reset dropdown to "Custom" if the user overrides numbers manually
+    ['bc', 'bullet_wt', 'bullet_dia', 'bullet_len'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        document.getElementById('bullet_preset').value = 'custom';
+      });
+    });
+
     // --- JBM G7 DRAG TABLE ---
     const G7_TABLE = [
       [0.00, 0.1198], [0.05, 0.1197], [0.10, 0.1196], [0.15, 0.1194],
@@ -220,7 +313,7 @@
       const lenIn = parseFloat(document.getElementById('bullet_len').value);
       const twistIn = parseFloat(document.getElementById('twist').value);
 
-      // Constants
+      // Constants & Conversions
       const g = 9.80665;
       const v0 = mvFps * 0.3048;
       const sightH_m = sightHIn * 0.0254;
@@ -234,7 +327,7 @@
       const refArea = (Math.PI / 4) * (0.0254 ** 2);
       const dragConst = (density * refArea) / (2.0 * 0.45359237 * bc);
 
-      // Wind Vector
+      // 3D Apparent Wind Vector
       const windRad = (windClock * 30.0) * (Math.PI / 180);
       const wMps = windMph * 0.44704;
       const wx = -wMps * Math.cos(windRad);
@@ -299,14 +392,14 @@
         t += dt;
       }
 
-      // Exact linear step interpolation
+      // Linear step interpolation
       const frac = (x !== px) ? (target_m - px) / (x - px) : 1.0;
       const yFinal = py + frac * (y - py);
       const zFinal = pz + frac * (z - pz);
       const tFinal = pt + frac * (t - pt);
       const vImpact = Math.sqrt((pvx + frac * (vx - pvx))**2 + (pvy + frac * (vy - pvy))**2 + (pvz + frac * (vz - pvz))**2);
 
-      // Stability factor & Spin Drift
+      // Stability Factor (Miller) & Spin Drift
       const tRatio = twistIn / diaIn;
       const lRatio = lenIn / diaIn;
       const ft = ((tempF + 460) / 519.0) * (29.92 / pressInHg);
@@ -321,7 +414,7 @@
       const windMrad = Math.atan2(-totalZIn * 0.0254, target_m) * 1000.0;
       const windDir = windMrad > 0 ? "R" : "L";
 
-      // Render to DOM
+      // Render to UI
       document.getElementById('disp-elev-mrad').innerText = elevMrad.toFixed(2);
       document.getElementById('disp-elev-moa').innerText = (elevMrad * 3.43775).toFixed(1) + " MOA";
       document.getElementById('disp-wind-mrad').innerText = Math.abs(windMrad).toFixed(2) + " " + windDir;
@@ -333,11 +426,11 @@
       document.getElementById('disp-sg').innerText = sg.toFixed(2);
     }
 
-    // Attach real-time calculation to all inputs
+    // Attach listeners
     document.querySelectorAll('input').forEach(input => input.addEventListener('input', calculate));
     window.addEventListener('DOMContentLoaded', calculate);
 
-    // Register PWA Service Worker
+    // Register Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
